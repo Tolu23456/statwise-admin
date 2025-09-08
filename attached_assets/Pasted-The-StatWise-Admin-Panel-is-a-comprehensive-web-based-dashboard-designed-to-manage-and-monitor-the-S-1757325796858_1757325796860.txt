@@ -1,0 +1,298 @@
+The StatWise Admin Panel is a comprehensive web-based dashboard designed to manage and monitor the StatWise AI Sports Prediction PWA. It provides administrators with complete control over users, subscriptions, payments, predictions, referrals, and system analytics. The admin panel should be built as a separate application that connects to the same Supabase database as the main StatWise app.
+
+Technical Architecture
+Backend Connection
+Primary Database: Supabase PostgreSQL (same instance as the main app)
+Authentication: Supabase Auth with admin role-based access control
+Storage: Supabase Storage for admin assets and exports
+Real-time Updates: Supabase real-time subscriptions for live data monitoring
+Required Technology Stack
+Frontend Framework: React.js or Vue.js with TypeScript
+UI Library: Ant Design, Material-UI, or similar enterprise-grade components
+Charts/Analytics: Chart.js, D3.js, or Recharts for data visualization
+Data Tables: AG Grid or similar for large dataset management
+Deployment: Vercel, Netlify, or Replit (same platform as main app)
+Database Schema Access
+The admin panel connects to these existing Supabase tables:
+
+-- User management
+user_profiles (id, email, display_name, current_tier, subscription_period, subscription_start, subscription_end, subscription_status, referral_code, total_referrals, profile_picture_url, total_referral_rewards, created_at, updated_at, last_login)
+-- Subscription tracking
+subscription_events (id, user_id, event_type, event_data, created_at)
+-- Payment processing
+payment_transactions (id, user_id, transaction_id, tx_ref, amount, currency, status, payment_type, tier, period, created_at)
+-- Referral system
+referrals (id, referrer_id, referred_id, referral_code, reward_claimed, reward_amount, created_at)
+referral_codes (id, user_id, code, created_at, updated_at)
+-- Additional admin tables (to be created)
+admin_users (id, email, role, permissions, created_at, last_login)
+prediction_results (id, match_id, prediction, actual_result, confidence, accuracy, created_at)
+system_logs (id, action, admin_id, target_user_id, details, created_at)
+app_settings (key, value, description, updated_at, updated_by)
+Core Features & Pages
+1. Dashboard Overview
+Purpose: High-level system metrics and quick actions
+
+Key Metrics Display:
+
+Total active users (real-time count)
+Revenue metrics (daily, weekly, monthly)
+Subscription distribution by tier (Free, Premium, VIP, VVIP)
+Payment success rate and failed transactions
+Top referrers and referral performance
+App usage analytics (page views, feature usage)
+System health indicators
+Visual Components:
+
+Revenue charts (line graphs for trends)
+Subscription tier pie charts
+User activity heatmaps
+Recent transactions feed
+Quick action buttons (ban user, issue refund, send notifications)
+2. User Management System
+2.1 User Directory
+Features:
+
+Searchable user list with advanced filters
+Filter by: subscription tier, registration date, last login, referral status
+Bulk actions: export data, send messages, update tiers
+User status indicators (active, suspended, premium, etc.)
+User Details View:
+
+Complete user profile with edit capabilities
+Subscription history and payment records
+Referral tree visualization (who they referred, who referred them)
+Login activity and device tracking
+Account activity timeline
+Profile picture management
+2.2 User Actions
+Account Management: Suspend, reactivate, delete accounts
+Subscription Control: Manually upgrade/downgrade subscriptions
+Communication: Send direct messages or notifications
+Data Export: Export user data for compliance requests
+Impersonation: Log in as user for support purposes (with audit trail)
+3. Subscription & Payment Management
+3.1 Subscription Overview
+Dashboard Features:
+
+Subscription revenue analytics with trends
+Churn rate calculation and prediction
+Subscription lifecycle analytics (signup → conversion → retention)
+Tier migration patterns (which users upgrade/downgrade)
+3.2 Payment Transaction Management
+Features:
+
+Real-time payment monitoring dashboard
+Failed payment investigation and retry system
+Refund processing interface
+Payment method analytics
+Fraud detection alerts
+Integration with Flutterwave admin panel
+Transaction Details:
+
+Complete payment history per user
+Transaction status tracking (pending, successful, failed)
+Payment method breakdown
+Revenue forecasting based on subscription patterns
+3.3 Subscription Controls
+Manual subscription adjustments
+Promotional code creation and management
+Free trial extension capabilities
+Bulk subscription operations
+Automated subscription renewal monitoring
+4. Referral System Administration
+4.1 Referral Analytics
+Key Metrics:
+
+Top referrers leaderboard
+Referral conversion rates
+Reward distribution tracking
+Referral code usage patterns
+Geographic referral distribution
+4.2 Referral Management
+Features:
+
+Custom referral code generation
+Referral reward adjustment system
+Referral relationship mapping
+Bulk reward distribution
+Referral fraud detection
+Manual referral relationship creation/removal
+4.3 Reward System
+Reward calculation engine configuration
+Manual reward distribution
+Reward history and audit trails
+Promotional referral campaigns
+Referral program A/B testing tools
+5. Prediction & Content Management
+5.1 Prediction Analytics
+Features:
+
+Prediction accuracy tracking per league/competition
+Confidence level analysis and optimization
+User engagement with predictions
+Popular leagues and match tracking
+Prediction performance trends
+5.2 Content Moderation
+Features:
+
+Prediction content review and approval system
+AI-generated content quality control
+User-generated content moderation
+Automated content flagging system
+Prediction result verification
+5.3 Prediction Configuration
+League and competition management
+Confidence threshold settings
+Prediction algorithm parameter tuning
+Match data source configuration
+Automated prediction scheduling
+6. Communication & Notifications
+6.1 Push Notification Management
+Features:
+
+Targeted notification campaigns
+User segment-based messaging
+Notification template management
+Delivery tracking and analytics
+A/B testing for notification content
+6.2 Email Communication
+Features:
+
+Email campaign creation and management
+Automated email sequences (welcome, upgrade reminders)
+Email template designer
+Delivery and engagement analytics
+Subscription management for marketing emails
+6.3 In-App Messaging
+Features:
+
+Broadcast message system
+Targeted user messaging
+Announcement management
+Message scheduling capabilities
+User notification preferences management
+7. Analytics & Reporting
+7.1 Business Intelligence Dashboard
+Key Reports:
+
+Revenue and growth analytics
+User acquisition and retention metrics
+Subscription lifecycle analysis
+Geographic user distribution
+Feature usage analytics
+App performance metrics
+7.2 Custom Report Builder
+Features:
+
+Drag-and-drop report creation
+Custom date range selection
+Multiple data source integration
+Automated report scheduling
+Export capabilities (PDF, Excel, CSV)
+7.3 Real-time Monitoring
+Features:
+
+Live user activity monitoring
+Real-time payment processing tracking
+System performance alerts
+Error rate monitoring
+API usage analytics
+8. System Administration
+8.1 Admin User Management
+Features:
+
+Admin role creation and permission management
+Admin activity audit trails
+Two-factor authentication for admin accounts
+Admin account approval workflow
+Session management and security controls
+8.2 System Configuration
+Features:
+
+App settings and configuration management
+Feature flag controls for A/B testing
+System maintenance mode controls
+Database backup and restoration tools
+API rate limiting configuration
+8.3 Security & Compliance
+Features:
+
+Security audit logs
+GDPR compliance tools (data export, deletion)
+Fraud detection and prevention
+IP blocking and rate limiting
+Data encryption management
+User Interface Design Requirements
+Design Principles
+Responsive Design: Must work on desktop, tablet, and mobile devices
+Dark/Light Mode: Toggle between themes for admin preference
+Accessibility: WCAG 2.1 AA compliance for screen readers and navigation
+Performance: Fast loading times with pagination for large datasets
+Intuitive Navigation: Clear menu structure with breadcrumbs
+Component Requirements
+Data Tables: Sortable, filterable, with export capabilities
+Charts: Interactive charts with drill-down capabilities
+Forms: Validation, auto-save, and error handling
+Modals: For quick actions without page navigation
+Notifications: Toast notifications for actions and system alerts
+Security Requirements
+Authentication & Authorization
+Multi-Factor Authentication: Required for all admin accounts
+Role-Based Access Control: Different permission levels (Super Admin, Manager, Support)
+Session Management: Automatic logout after inactivity
+IP Whitelisting: Restrict admin access to specific IP addresses
+Data Protection
+Encryption: All sensitive data must be encrypted at rest and in transit
+Audit Logging: Complete audit trail of all admin actions
+Data Masking: Sensitive user data should be masked in certain views
+Backup Security: Encrypted automated backups with retention policies
+Compliance Features
+GDPR Tools: Data export, deletion, and consent management
+Audit Reports: Compliance reporting for regulations
+Data Retention: Automated data purging based on retention policies
+Privacy Controls: User data anonymization tools
+Integration Requirements
+Supabase Integration
+Real-time Subscriptions: Live data updates without page refresh
+Row Level Security: Proper RLS policies for admin data access
+Database Functions: Use Supabase functions for complex operations
+Storage Integration: File upload and management capabilities
+Third-Party Integrations
+Flutterwave Admin API: Direct integration for payment management
+Email Service: Integration with email providers for notifications
+Analytics Services: Google Analytics or similar for usage tracking
+Monitoring Tools: Error tracking and performance monitoring
+Performance Requirements
+Speed & Responsiveness
+Page Load Time: Under 2 seconds for all pages
+Data Pagination: Handle large datasets with efficient pagination
+Caching Strategy: Implement caching for frequently accessed data
+Optimistic Updates: UI updates before server confirmation
+Scalability
+Database Optimization: Efficient queries with proper indexing
+Component Architecture: Reusable components for maintainability
+State Management: Proper state management for complex data flows
+Memory Management: Prevent memory leaks in long-running sessions
+Development Guidelines
+Code Quality
+TypeScript: Strong typing for better code reliability
+Testing: Unit tests for critical functions, integration tests for workflows
+Documentation: Comprehensive code documentation and user guides
+Code Review: Mandatory peer review for all changes
+Deployment & Maintenance
+CI/CD Pipeline: Automated testing and deployment
+Environment Management: Separate staging and production environments
+Monitoring: Application performance monitoring and error tracking
+Backup Strategy: Regular automated backups with disaster recovery plan
+Success Metrics
+User Experience Metrics
+Admin Efficiency: Time to complete common tasks
+User Satisfaction: Admin user feedback and surveys
+Error Rate: Frequency of user errors and system issues
+Feature Adoption: Usage statistics for different admin features
+Business Impact Metrics
+Revenue Growth: Impact on subscription and payment processing
+User Retention: Effect on user churn and engagement
+Operational Efficiency: Reduction in manual support tasks
+Compliance: Successful audit results and regulatory compliance
