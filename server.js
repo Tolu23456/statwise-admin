@@ -45,8 +45,17 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Serve index.html for all other routes (SPA routing)
-app.get('*', (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Fallback for SPA routes
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    next();
+  }
 });
 
 // Error handling middleware
