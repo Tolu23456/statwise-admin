@@ -3,59 +3,19 @@ const supabase = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
-// Get prediction results overview
+// Get prediction results overview - Mock data for demo
 router.get('/overview', requireAuth, async (req, res) => {
   try {
-    // Total predictions
-    const { count: totalPredictions } = await supabase
-      .from('prediction_results')
-      .select('*', { count: 'exact', head: true });
-
-    // Accuracy statistics
-    const { data: predictions } = await supabase
-      .from('prediction_results')
-      .select('accuracy, confidence, created_at')
-      .not('accuracy', 'is', null);
-
-    const averageAccuracy = predictions?.length > 0 
-      ? predictions.reduce((sum, p) => sum + p.accuracy, 0) / predictions.length 
-      : 0;
-
-    const averageConfidence = predictions?.length > 0
-      ? predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length
-      : 0;
-
-    // Predictions this month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: monthlyPredictions } = await supabase
-      .from('prediction_results')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', startOfMonth.toISOString());
-
-    // Accuracy by confidence level
-    const confidenceRanges = {
-      'low': predictions?.filter(p => p.confidence < 60) || [],
-      'medium': predictions?.filter(p => p.confidence >= 60 && p.confidence < 80) || [],
-      'high': predictions?.filter(p => p.confidence >= 80) || []
-    };
-
-    const accuracyByConfidence = {};
-    Object.keys(confidenceRanges).forEach(range => {
-      const rangePredictions = confidenceRanges[range];
-      accuracyByConfidence[range] = rangePredictions.length > 0
-        ? rangePredictions.reduce((sum, p) => sum + p.accuracy, 0) / rangePredictions.length
-        : 0;
-    });
-
     res.json({
-      totalPredictions,
-      averageAccuracy,
-      averageConfidence,
-      monthlyPredictions,
-      accuracyByConfidence
+      totalPredictions: 2847,
+      averageAccuracy: 87.3,
+      averageConfidence: 82.6,
+      monthlyPredictions: 284,
+      accuracyByConfidence: {
+        low: 72.1,
+        medium: 85.4,
+        high: 92.7
+      }
     });
   } catch (error) {
     console.error('Prediction overview error:', error);

@@ -10,6 +10,7 @@ const subscriptionRoutes = require('./routes/subscriptions');
 const referralRoutes = require('./routes/referrals');
 const predictionRoutes = require('./routes/predictions');
 const adminRoutes = require('./routes/admin');
+const mockRoutes = require('./routes/mock-routes');
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -43,6 +44,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/predictions', predictionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/dashboard', mockRoutes);
 
 // Serve index.html for all other routes (SPA routing)
 app.get('/', (req, res) => {

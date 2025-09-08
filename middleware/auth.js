@@ -4,29 +4,17 @@ const requireAuth = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+    if (!token || !token.startsWith('dev-token-')) {
+      return res.status(401).json({ error: 'No valid token provided' });
     }
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
+    // Check session for simplified auth
+    if (!req.session || !req.session.isAuthenticated || !req.session.adminUser) {
+      return res.status(401).json({ error: 'Session expired or not authenticated' });
     }
 
-    // Check if user is admin
-    const { data: adminUser, error: adminError } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', user.email)
-      .single();
-
-    if (adminError || !adminUser) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    req.user = user;
-    req.admin = adminUser;
+    req.user = { email: req.session.adminUser.email, id: req.session.adminUser.id };
+    req.admin = req.session.adminUser;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

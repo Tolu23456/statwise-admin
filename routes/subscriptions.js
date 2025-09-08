@@ -3,53 +3,24 @@ const supabase = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
-// Get subscription overview
+// Get subscription overview - Mock data for demo
 router.get('/overview', requireAuth, async (req, res) => {
   try {
-    // Total revenue
-    const { data: transactions } = await supabase
-      .from('payment_transactions')
-      .select('amount, currency, status, created_at')
-      .eq('status', 'successful');
-
-    const totalRevenue = transactions?.reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0) || 0;
-
-    // Revenue this month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const monthlyRevenue = transactions?.filter(t => 
-      new Date(t.created_at) >= startOfMonth
-    ).reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0) || 0;
-
-    // Subscription distribution
-    const { data: subscriptions } = await supabase
-      .from('user_profiles')
-      .select('current_tier, subscription_status');
-
-    const subscriptionStats = subscriptions?.reduce((acc, sub) => {
-      const key = `${sub.current_tier || 'free'}_${sub.subscription_status || 'active'}`;
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {}) || {};
-
-    // Payment success rate
-    const { data: allTransactions } = await supabase
-      .from('payment_transactions')
-      .select('status');
-
-    const successfulCount = allTransactions?.filter(t => t.status === 'successful').length || 0;
-    const totalTransactions = allTransactions?.length || 1;
-    const successRate = (successfulCount / totalTransactions) * 100;
-
+    // Mock subscription data
     res.json({
-      totalRevenue,
-      monthlyRevenue,
-      subscriptionStats,
-      successRate,
-      totalTransactions,
-      successfulTransactions: successfulCount
+      totalRevenue: 45780.50,
+      monthlyRevenue: 8950.25,
+      subscriptionStats: {
+        free_active: 523,
+        premium_active: 421,
+        vip_active: 248,
+        vvip_active: 55,
+        premium_inactive: 12,
+        vip_inactive: 8
+      },
+      successRate: 94.2,
+      totalTransactions: 2847,
+      successfulTransactions: 2683
     });
   } catch (error) {
     console.error('Subscription overview error:', error);
@@ -57,56 +28,48 @@ router.get('/overview', requireAuth, async (req, res) => {
   }
 });
 
-// Get payment transactions
+// Get payment transactions - Mock data for demo
 router.get('/transactions', requireAuth, async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      status = '', 
-      tier = '',
-      startDate = '',
-      endDate = ''
-    } = req.query;
+    const mockTransactions = [
+      {
+        id: '1',
+        amount: '29.99',
+        currency: 'USD',
+        status: 'successful',
+        tier: 'premium',
+        created_at: '2024-09-08T10:30:00Z',
+        user_profiles: { email: 'user1@example.com', display_name: 'John Doe' }
+      },
+      {
+        id: '2',
+        amount: '49.99',
+        currency: 'USD',
+        status: 'successful',
+        tier: 'vip',
+        created_at: '2024-09-07T15:22:00Z',
+        user_profiles: { email: 'user2@example.com', display_name: 'Jane Smith' }
+      },
+      {
+        id: '3',
+        amount: '29.99',
+        currency: 'USD',
+        status: 'failed',
+        tier: 'premium',
+        created_at: '2024-09-06T09:15:00Z',
+        user_profiles: { email: 'user3@example.com', display_name: 'Bob Wilson' }
+      }
+    ];
 
-    const offset = (page - 1) * limit;
-    let query = supabase
-      .from('payment_transactions')
-      .select(`
-        *,
-        user_profiles!inner(email, display_name)
-      `, { count: 'exact' });
-
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status);
-    }
-    
-    if (tier) {
-      query = query.eq('tier', tier);
-    }
-
-    if (startDate) {
-      query = query.gte('created_at', startDate);
-    }
-
-    if (endDate) {
-      query = query.lte('created_at', endDate);
-    }
-
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
+    const { page = 1, limit = 20 } = req.query;
+    const total = mockTransactions.length;
+    const totalPages = Math.ceil(total / limit);
 
     res.json({
-      transactions: data,
-      total: count,
+      transactions: mockTransactions,
+      total,
       page: parseInt(page),
-      totalPages: Math.ceil(count / limit)
+      totalPages
     });
   } catch (error) {
     console.error('Transactions fetch error:', error);
