@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "python-3.11", "bash"]
+modules = ["nodejs-20", "web", "python-3.11", "bash", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
@@ -38,4 +38,4 @@ localPort = 5000
 externalPort = 80
 
 [agent]
-integrations = ["flask_supabase==1.0.0"]
+integrations = ["flask_supabase:1.0.0"]
