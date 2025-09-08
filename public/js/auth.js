@@ -30,7 +30,6 @@ class Auth {
       const password = document.getElementById('password').value;
 
       try {
-        Utils.showLoading();
         loginError.classList.add('d-none');
 
         const response = await api.login(email, password);
@@ -50,8 +49,6 @@ class Auth {
         console.error('Login error:', error);
         loginError.textContent = error.message || 'Login failed. Please try again.';
         loginError.classList.remove('d-none');
-      } finally {
-        Utils.hideLoading();
       }
     });
 
@@ -71,7 +68,6 @@ class Auth {
     }
 
     try {
-      Utils.showLoading();
       const response = await api.checkAuth();
       
       this.user = response.user;
@@ -86,8 +82,6 @@ class Auth {
     } catch (error) {
       console.error('Auth check failed:', error);
       this.showLoginModal();
-    } finally {
-      Utils.hideLoading();
     }
   }
 
