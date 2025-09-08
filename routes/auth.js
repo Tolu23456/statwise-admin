@@ -2,59 +2,70 @@ const express = require('express');
 const supabase = require('../config/database');
 const router = express.Router();
 
-// Admin login - Simplified for immediate access
+// Admin login with Supabase authentication
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // For immediate access: Simple admin check
-    if (email === 'admin@statwise.com' && password === 'admin123') {
-      // Create mock admin user
-      const adminUser = {
-        id: '00000000-0000-0000-0000-000000000001',
-        email: 'admin@statwise.com',
-        full_name: 'Admin User',
-        role: 'super_admin',
-        permissions: ['all'],
-        is_active: true,
-        created_at: new Date().toISOString(),
-        last_login: new Date().toISOString()
-      };
+    // Authenticate with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-      // Try to get from database, but don't fail if table doesn't exist yet
-      try {
-        const { data: dbAdminUser, error: adminError } = await supabase
+    if (authError) {
+      return res.status(401).json({ error: authError.message });
+    }
+
+    // Check if user exists in admin_users table
+    const { data: adminUser, error: adminError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (adminError || !adminUser) {
+      // If no admin user found, check if this is the first admin setup
+      if (email === 'admin@statwise.com') {
+        // Create default admin user
+        const { data: newAdmin, error: createError } = await supabase
           .from('admin_users')
-          .select('*')
-          .eq('email', email)
+          .insert({
+            email: email,
+            full_name: 'Admin User',
+            role: 'super_admin',
+            permissions: ['all'],
+            is_active: true
+          })
+          .select()
           .single();
 
-        if (!adminError && dbAdminUser) {
-          // Update last login if user exists in database
-          await supabase
-            .from('admin_users')
-            .update({ last_login: new Date().toISOString() })
-            .eq('id', dbAdminUser.id);
-          
-          // Use database user data
-          Object.assign(adminUser, dbAdminUser);
+        if (createError) {
+          console.error('Failed to create admin user:', createError);
+          return res.status(403).json({ error: 'Admin access required' });
         }
-      } catch (dbError) {
-        console.log('Database table not ready yet, using mock admin user');
+
+        req.session.adminUser = newAdmin;
+      } else {
+        return res.status(403).json({ error: 'Admin access required' });
       }
-
-      // Create session
-      req.session.adminUser = adminUser;
-      req.session.isAuthenticated = true;
-
-      res.json({
-        user: { email: adminUser.email, id: adminUser.id },
-        admin: adminUser,
-        session: { access_token: 'dev-token-' + adminUser.id }
-      });
     } else {
-      return res.status(401).json({ error: 'Invalid admin credentials' });
+      // Update last login
+      await supabase
+        .from('admin_users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', adminUser.id);
+
+      req.session.adminUser = adminUser;
     }
+
+    req.session.isAuthenticated = true;
+
+    res.json({
+      user: authData.user,
+      admin: req.session.adminUser,
+      session: authData.session
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });

@@ -3,49 +3,55 @@ const supabase = require('../config/database');
 const { requireAuth, requirePermission } = require('../middleware/auth');
 const router = express.Router();
 
-// Get all users with pagination and filters - Mock data for demo
+// Get all users with pagination and filters
 router.get('/', requireAuth, async (req, res) => {
   try {
-    // Mock user data for demonstration
-    const mockUsers = [
-      {
-        id: '1',
-        email: 'user1@example.com',
-        display_name: 'John Doe',
-        current_tier: 'premium',
-        subscription_status: 'active',
-        created_at: '2024-01-15T10:30:00Z',
-        last_login: '2024-09-08T09:15:00Z'
-      },
-      {
-        id: '2',
-        email: 'user2@example.com',
-        display_name: 'Jane Smith',
-        current_tier: 'vip',
-        subscription_status: 'active',
-        created_at: '2024-02-20T14:22:00Z',
-        last_login: '2024-09-07T16:45:00Z'
-      },
-      {
-        id: '3',
-        email: 'user3@example.com',
-        display_name: 'Bob Wilson',
-        current_tier: 'free',
-        subscription_status: 'inactive',
-        created_at: '2024-03-10T08:11:00Z',
-        last_login: '2024-09-05T12:30:00Z'
-      }
-    ];
+    const { 
+      page = 1, 
+      limit = 20, 
+      search = '', 
+      tier = '', 
+      status = '',
+      sortBy = 'created_at',
+      sortOrder = 'desc'
+    } = req.query;
 
-    const { page = 1, limit = 20 } = req.query;
-    const total = mockUsers.length;
-    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    let query = supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact' });
+
+    // Apply filters
+    if (search) {
+      query = query.or(`email.ilike.%${search}%,display_name.ilike.%${search}%`);
+    }
+    
+    if (tier) {
+      query = query.eq('current_tier', tier);
+    }
+    
+    if (status) {
+      query = query.eq('subscription_status', status);
+    }
+
+    // Apply sorting and pagination
+    query = query
+      .order(sortBy, { ascending: sortOrder === 'asc' })
+      .range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Database error:', error);
+      // Return empty data if table doesn't exist yet
+      return res.json({ users: [], total: 0, page: 1, totalPages: 0 });
+    }
 
     res.json({
-      users: mockUsers,
-      total,
+      users: data || [],
+      total: count || 0,
       page: parseInt(page),
-      totalPages
+      totalPages: Math.ceil((count || 0) / limit)
     });
   } catch (error) {
     console.error('Users fetch error:', error);
@@ -178,24 +184,60 @@ router.post('/:id/suspend', requireAuth, requirePermission('user_management'), a
   }
 });
 
-// Get user statistics - Mock data for demo
+// Get user statistics
 router.get('/stats/overview', requireAuth, async (req, res) => {
   try {
-    // Mock statistics for demonstration
+    // Total users
+    const { count: totalUsers } = await supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact', head: true });
+
+    // Active users (logged in within last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { count: activeUsers } = await supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_login', thirtyDaysAgo.toISOString());
+
+    // Subscription tiers distribution
+    const { data: tierStats } = await supabase
+      .from('user_profiles')
+      .select('current_tier')
+      .not('current_tier', 'is', null);
+
+    const tierDistribution = (tierStats || []).reduce((acc, user) => {
+      const tier = user.current_tier || 'Free Tier';
+      acc[tier] = (acc[tier] || 0) + 1;
+      return acc;
+    }, {});
+
+    // New users this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { count: newUsersThisMonth } = await supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfMonth.toISOString());
+
     res.json({
-      totalUsers: 1247,
-      activeUsers: 892,
-      tierDistribution: {
-        free: 523,
-        premium: 421,
-        vip: 248,
-        vvip: 55
-      },
-      newUsersThisMonth: 89
+      totalUsers: totalUsers || 0,
+      activeUsers: activeUsers || 0,
+      tierDistribution,
+      newUsersThisMonth: newUsersThisMonth || 0
     });
   } catch (error) {
     console.error('User stats error:', error);
-    res.status(500).json({ error: 'Failed to fetch user statistics' });
+    // Return default values if database tables don't exist yet
+    res.json({
+      totalUsers: 0,
+      activeUsers: 0,
+      tierDistribution: {},
+      newUsersThisMonth: 0
+    });
   }
 });
 

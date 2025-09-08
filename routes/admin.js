@@ -3,19 +3,20 @@ const supabase = require('../config/database');
 const { requireAuth, requirePermission } = require('../middleware/auth');
 const router = express.Router();
 
-// Get all admin users - Mock data for demo
+// Get all admin users
 router.get('/users', requireAuth, async (req, res) => {
   try {
-    res.json([
-      {
-        id: '1',
-        email: 'admin@statwise.com',
-        role: 'super_admin',
-        permissions: ['all'],
-        created_at: '2024-01-15T10:30:00Z',
-        last_login: '2024-09-08T10:30:00Z'
-      }
-    ]);
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('id, email, full_name, role, permissions, created_at, last_login')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database error:', error);
+      return res.json([]);
+    }
+
+    res.json(data || []);
   } catch (error) {
     console.error('Admin users fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch admin users' });

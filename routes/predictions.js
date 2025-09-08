@@ -3,18 +3,20 @@ const supabase = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
-// Get prediction results overview - Mock data for demo
+// Get prediction results overview
 router.get('/overview', requireAuth, async (req, res) => {
   try {
+    // Note: This will create a prediction_results table if needed in the future
+    // For now, return default values since this table doesn't exist yet
     res.json({
-      totalPredictions: 2847,
-      averageAccuracy: 87.3,
-      averageConfidence: 82.6,
-      monthlyPredictions: 284,
+      totalPredictions: 0,
+      averageAccuracy: 0,
+      averageConfidence: 0,
+      monthlyPredictions: 0,
       accuracyByConfidence: {
-        low: 72.1,
-        medium: 85.4,
-        high: 92.7
+        low: 0,
+        medium: 0,
+        high: 0
       }
     });
   } catch (error) {

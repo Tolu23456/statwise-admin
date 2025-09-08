@@ -3,22 +3,65 @@ const supabase = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
-// Get referral overview - Mock data for demo
+// Get referral overview
 router.get('/overview', requireAuth, async (req, res) => {
   try {
+    // Total referrals
+    const { count: totalReferrals } = await supabase
+      .from('referrals')
+      .select('*', { count: 'exact', head: true });
+
+    // Total rewards distributed
+    const { data: referrals } = await supabase
+      .from('referrals')
+      .select('reward_amount')
+      .eq('reward_claimed', true);
+
+    const totalRewards = (referrals || []).reduce((sum, referral) => sum + (referral.reward_amount || 0), 0);
+
+    // Top referrers
+    const { data: topReferrers } = await supabase
+      .from('user_profiles')
+      .select('id, email, display_name, total_referrals, total_referral_rewards')
+      .gt('total_referrals', 0)
+      .order('total_referrals', { ascending: false })
+      .limit(10);
+
+    // Referrals this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { count: monthlyReferrals } = await supabase
+      .from('referrals')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfMonth.toISOString());
+
+    // Conversion rate
+    const { data: allReferrals } = await supabase
+      .from('referrals')
+      .select('reward_claimed');
+
+    const claimedCount = (allReferrals || []).filter(r => r.reward_claimed).length;
+    const conversionRate = totalReferrals > 0 ? (claimedCount / totalReferrals) * 100 : 0;
+
     res.json({
-      totalReferrals: 342,
-      totalRewards: 1580.75,
-      topReferrers: [
-        { id: '1', email: 'user1@example.com', display_name: 'John Doe', total_referrals: 15, total_referral_rewards: 75.00 },
-        { id: '2', email: 'user2@example.com', display_name: 'Jane Smith', total_referrals: 12, total_referral_rewards: 60.00 }
-      ],
-      monthlyReferrals: 28,
-      conversionRate: 68.4
+      totalReferrals: totalReferrals || 0,
+      totalRewards,
+      topReferrers: topReferrers || [],
+      monthlyReferrals: monthlyReferrals || 0,
+      conversionRate
     });
   } catch (error) {
     console.error('Referral overview error:', error);
-    res.status(500).json({ error: 'Failed to fetch referral overview' });
+    // Return default values if tables don't exist yet
+    res.json({
+      totalReferrals: 0,
+      totalRewards: 0,
+      topReferrers: [],
+      monthlyReferrals: 0,
+      conversionRate: 0
+    });
   }
 });
 

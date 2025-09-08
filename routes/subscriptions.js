@@ -3,73 +3,119 @@ const supabase = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
-// Get subscription overview - Mock data for demo
+// Get subscription overview
 router.get('/overview', requireAuth, async (req, res) => {
   try {
-    // Mock subscription data
+    // Total revenue
+    const { data: transactions } = await supabase
+      .from('payment_transactions')
+      .select('amount, currency, status, created_at')
+      .eq('status', 'successful');
+
+    const totalRevenue = (transactions || []).reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0);
+
+    // Revenue this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const monthlyRevenue = (transactions || []).filter(t => 
+      new Date(t.created_at) >= startOfMonth
+    ).reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0);
+
+    // Subscription distribution
+    const { data: subscriptions } = await supabase
+      .from('user_profiles')
+      .select('current_tier, subscription_status');
+
+    const subscriptionStats = (subscriptions || []).reduce((acc, sub) => {
+      const key = `${sub.current_tier || 'Free Tier'}_${sub.subscription_status || 'active'}`;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Payment success rate
+    const { data: allTransactions } = await supabase
+      .from('payment_transactions')
+      .select('status');
+
+    const successfulCount = (allTransactions || []).filter(t => t.status === 'successful').length;
+    const totalTransactions = (allTransactions || []).length;
+    const successRate = totalTransactions > 0 ? (successfulCount / totalTransactions) * 100 : 0;
+
     res.json({
-      totalRevenue: 45780.50,
-      monthlyRevenue: 8950.25,
-      subscriptionStats: {
-        free_active: 523,
-        premium_active: 421,
-        vip_active: 248,
-        vvip_active: 55,
-        premium_inactive: 12,
-        vip_inactive: 8
-      },
-      successRate: 94.2,
-      totalTransactions: 2847,
-      successfulTransactions: 2683
+      totalRevenue,
+      monthlyRevenue,
+      subscriptionStats,
+      successRate,
+      totalTransactions,
+      successfulTransactions: successfulCount
     });
   } catch (error) {
     console.error('Subscription overview error:', error);
-    res.status(500).json({ error: 'Failed to fetch subscription overview' });
+    // Return default values if tables don't exist yet
+    res.json({
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      subscriptionStats: {},
+      successRate: 0,
+      totalTransactions: 0,
+      successfulTransactions: 0
+    });
   }
 });
 
-// Get payment transactions - Mock data for demo
+// Get payment transactions
 router.get('/transactions', requireAuth, async (req, res) => {
   try {
-    const mockTransactions = [
-      {
-        id: '1',
-        amount: '29.99',
-        currency: 'USD',
-        status: 'successful',
-        tier: 'premium',
-        created_at: '2024-09-08T10:30:00Z',
-        user_profiles: { email: 'user1@example.com', display_name: 'John Doe' }
-      },
-      {
-        id: '2',
-        amount: '49.99',
-        currency: 'USD',
-        status: 'successful',
-        tier: 'vip',
-        created_at: '2024-09-07T15:22:00Z',
-        user_profiles: { email: 'user2@example.com', display_name: 'Jane Smith' }
-      },
-      {
-        id: '3',
-        amount: '29.99',
-        currency: 'USD',
-        status: 'failed',
-        tier: 'premium',
-        created_at: '2024-09-06T09:15:00Z',
-        user_profiles: { email: 'user3@example.com', display_name: 'Bob Wilson' }
-      }
-    ];
+    const { 
+      page = 1, 
+      limit = 20, 
+      status = '', 
+      tier = '',
+      startDate = '',
+      endDate = ''
+    } = req.query;
 
-    const { page = 1, limit = 20 } = req.query;
-    const total = mockTransactions.length;
-    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    let query = supabase
+      .from('payment_transactions')
+      .select(`
+        *,
+        user_profiles!inner(email, display_name)
+      `, { count: 'exact' });
+
+    // Apply filters
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    if (tier) {
+      query = query.eq('tier', tier);
+    }
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('created_at', endDate);
+    }
+
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Database error:', error);
+      return res.json({ transactions: [], total: 0, page: 1, totalPages: 0 });
+    }
 
     res.json({
-      transactions: mockTransactions,
-      total,
+      transactions: data || [],
+      total: count || 0,
       page: parseInt(page),
-      totalPages
+      totalPages: Math.ceil((count || 0) / limit)
     });
   } catch (error) {
     console.error('Transactions fetch error:', error);
