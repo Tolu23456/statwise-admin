@@ -2,7 +2,8 @@ import os
 import subprocess
 import threading
 import time
-from flask import Flask, send_from_directory, jsonify
+import requests
+from flask import Flask, send_from_directory, jsonify, request, Response
 
 app = Flask(__name__)
 
@@ -34,6 +35,40 @@ start_node_server()
 @app.route('/')
 def index():
     return send_from_directory('public', 'index.html')
+
+@app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def proxy_api(path):
+    """Proxy API calls to Node.js server"""
+    try:
+        url = f'http://localhost:3001/api/{path}'
+        
+        # Prepare request data
+        data = None
+        if request.method in ['POST', 'PUT']:
+            data = request.get_json()
+        
+        # Make request to Node.js server
+        resp = requests.request(
+            method=request.method,
+            url=url,
+            headers={key: value for key, value in request.headers.items() 
+                    if key.lower() != 'host'},
+            json=data,
+            params=dict(request.args),
+            timeout=30
+        )
+        
+        # Return response
+        return Response(
+            resp.content,
+            status=resp.status_code,
+            headers=dict(resp.headers)
+        )
+        
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "API server unavailable"}), 503
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/<path:path>')
 def serve_static(path):
